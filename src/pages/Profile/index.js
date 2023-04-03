@@ -7,8 +7,14 @@ import { FiSettings, FiUpload } from 'react-icons/fi';
 import { AuthContext } from '../../contexts/auth';
 import avatar from '../../assets/avatar.png';
 
-import './profile.css';
+import {db, store} from '../../services/firebaseConnection'
+import {doc, updateDoc} from 'firebase/firestore'
+import { ref, uploadBytes, getDownloadURL } from 'firebase/storage'
+
+
 import { toast } from 'react-toastify';
+
+import './profile.css';
 
 export default function Profile(){
 
@@ -34,12 +40,72 @@ export default function Profile(){
         }
     }
 
-    function handleSubmit(e){
+    async function handleUpload(){
+        const currendtUid = user.uid;
+
+        const uploadRef = ref(store, `images/${currendtUid}/${imageAvatar.name}`)
+
+        const uploadTask = uploadBytes(uploadRef, imageAvatar)
+        .then((snapshot)=>{
+            
+            getDownloadURL(snapshot.ref).then(async (downLoadURL)=>{
+                let urlFoto = downLoadURL;
+
+                const docRef = doc(db, "users", user.uid)
+                await updateDoc(docRef, {
+                    avatarUrl:urlFoto,
+                    nome: nome,
+                })
+                .then(()=>{
+                    let data = {
+                        ...user,
+                        nome:nome,
+                        avatarUrl:urlFoto,
+                    }
+    
+                    setUser(data);
+                    storgeUser(data);
+                    toast.success("Atualizado com sucesso!")
+                })
+            })
+
+        })
+    }
+
+    async function handleSubmit(e){
         e.preventDefault();
 
-        
+        if(imageAvatar === null && nome !== ''){
+            // atualizar apenas o nome do user
+            const docRef = doc(db,"users", user.uid);
+            await updateDoc(docRef,{
+                nome:nome,
+            })
+            .then(()=>{
+                let data = {
+                    ...user,
+                    nome:nome,
+                }
+
+                setUser(data);
+                storgeUser(data);
+                toast.success("Atualizado com sucesso!")
+            })
+            .catch((err)=>{
+                toast.warn("Ops! Deu algum erro")
+                console.log(err);
+            })
+        } else if(nome !== '' && imageAvatar !== null){
+
+            // atualizar nome e foto
+
+            handleUpload()
+
+        }
 
     }
+
+    
 
     return(
         <div>
