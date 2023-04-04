@@ -1,23 +1,107 @@
 
-import { useState } from 'react'
+import { useState, useEffect, useContext } from 'react'
 import Header from '../../components/Header'
 import Title from '../../components/Title'
 import { FiPlusCircle} from 'react-icons/fi'
 
+import { AuthContext } from '../../contexts/auth'
+import { db } from '../../services/firebaseConnection'
+import { collection,getDocs, getDoc, doc, addDoc } from 'firebase/firestore'
+
 import './new.css';
+import { toast } from 'react-toastify'
+
+const listRef = collection(db,"customer");
 
 export default function New(){
 
-  const [customers, setCustomers] = useState([])
+  const { user } = useContext(AuthContext);
+
+  const [customers, setCustomers] = useState([]);
+  const [loadCustomer, setLoadCustomer] = useState(true);
+  const [customerSelected, setCustomerSelected]  = useState(0);
 
   const [complemento, setComplemento] = useState('')
   const [assunto, setAssunto] = useState('Suporte')
   const [status, setStatus] = useState('Aberto')
 
 
+  useEffect(()=>{
+
+    async function loadCustomer(){
+
+      const querySnapshot = await getDocs(listRef)
+      .then((snapshot)=>{  
+        
+        let lista = [];
+
+        snapshot.forEach((doc)=>{
+          lista.push({
+            id:doc.id,
+            nomeFantasia: doc.data().nomeFantasia
+          })
+        })
+        
+        if (snapshot.docs.size === 0) {
+            console.log("NENHUMA EMPRESA ENCONTRADA!");
+            setCustomers([{id:"1", nomeFantasia:"Freela"}])
+            setLoadCustomer(false);
+            return;
+        }
+
+        setCustomers(lista);
+        setLoadCustomer(false);
+      })
+      .catch((e)=>{
+        console.log("erro ao buscar" + e);
+        setLoadCustomer(false);
+        setCustomers([{id:"1", nomeFantasia:"Freela"}])
+      })
+
+    }
+
+    loadCustomer();
+
+  },[])
+
   function handleOptionChange(e){
     setStatus(e.target.value);
-    console.log(status);
+    
+  }
+
+  function handleChangeSelect(e){
+    setAssunto(e.target.value);
+    
+  }
+
+  function hendleCustomerChange(e){
+    setCustomerSelected(e.target.value);
+    console.log(customers[e.target.value].nomeFantasia);
+  }
+
+  async function handleRegister(e){
+    e.preventDefault();
+
+    //registrar
+
+    await addDoc(collection(db,"chamados"), {
+      created: new Date(),
+      cliente: customers[customerSelected].nomeFantasia,
+      clienteId:customers[customerSelected].id,
+      assunto: assunto,
+      complemento	: complemento,
+      status: status,
+      userId: user.uid,
+    })
+    .then(()=>{
+      toast.success("Chamado registrado");
+      setComplemento('')
+      setCustomerSelected(0);
+    })
+    .catch((e)=>{
+      toast.error("Ops! Erro ao registrar, tente mais tarde!");
+      console.log(e);
+    })
   }
 
   return(
@@ -30,16 +114,27 @@ export default function New(){
         </Title>
 
         <div className="container">
-          <form className="form-profile">
+          <form className="form-profile" onSubmit={handleRegister}>
 
             <label>Clientes</label>
-            <select>
-              <option key={1} value={1}>Mercado Teste</option>
-              <option key={2} value={2}>Loja Informatica</option>
-            </select>
+            {
+              loadCustomer? (
+                <input type='text' disabled={true} value="Carregando.."/>
+              ) : (
+                <select value={customerSelected} onChange={hendleCustomerChange}>
+                  {customers.map((item, index)=>{
+                    return(
+                        <option key={index} value={index}>
+                          {item.nomeFantasia}
+                        </option>
+                    )
+                  })} 
+                </select>
+              )
+            }
 
             <label>Assunto</label>
-            <select>
+            <select value={assunto} onChange={handleChangeSelect}>
               <option value="Suporte">Suporte</option>
               <option value="Visita Tecnica">Visita Tecnica</option>
               <option value="Financeiro">Financeiro</option>
