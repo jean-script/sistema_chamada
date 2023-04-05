@@ -23,7 +23,11 @@ export default function Dashboard(){
 
     const [chamados, setChamados] = useState([]);
     const [loading, setLoading] = useState(true);
-    const [isEmpy, setIsEmpy] = useState(false)
+    const [isEmpy, setIsEmpy] = useState(false);
+
+    const [lastDocs, setLastDocs] = useState();
+    const [loadingMore, setLoadingMore] = useState(false);
+
 
     useEffect(()=>{
         async function loadChamados(){
@@ -63,10 +67,26 @@ export default function Dashboard(){
                 })
             });
 
+            const lastDoc = querySnapshot.docs[querySnapshot.docs.length - 1] //pegando ultimo chamado 
+            
             setChamados(chamados => [...chamados, ...lista])
+            setLastDocs(lastDoc);
+
         } else {
             setIsEmpy(true);
         }
+
+        setLoadingMore(false)
+    }
+
+    async function handleMore(){
+        setLoadingMore(true);
+
+        const q = query(listRef,orderBy('created', 'desc'), startAfter(lastDocs), limit(5));
+
+        const querySnapshot = await getDocs(q)
+        await updateState(querySnapshot);
+
     }
 
     if(loading){
@@ -131,22 +151,26 @@ export default function Dashboard(){
                                                 <td data-label="Cliente">{item.cliente}</td>
                                                 <td data-label="Assunto">{item.assunto}</td>
                                                 <td data-label="Status">
-                                                    <span className="badge" style={{backgroundColor:'#999'}}>{item.status}</span>
+                                                    <span className="badge" style={{ backgroundColor: item.status === "Aberto" ? '#5cb85c' : '#999' }}>{item.status}</span>
                                                 </td>
                                                 <td data-label="Cadastrado">{item.createFormat}</td>
                                                 <td data-label="#">
                                                     <button className="action" style={{backgroundColor:'#3583f7'}}>
                                                         <FiSearch color="#fff" size={17} />
                                                     </button>
-                                                    <button className="action" style={{backgroundColor:'#f6a935'}}>
+                                                    <Link to={`/new/${item.id}`} className="action" style={{backgroundColor:'#f6a935'}}>
                                                         <FiEdit2 color="#fff" size={17} />
-                                                    </button>
+                                                    </Link>
                                                 </td>
                                             </tr>
                                         )
                                     })}
                                 </tbody>
                             </table>
+
+                            {loadingMore && <h3>Buscando mais chamados...</h3>}
+
+                            {!loadingMore && !isEmpy && <button onClick={handleMore} className="btn-more">Buscar mais</button>}
                         </>
                     )}
                     
