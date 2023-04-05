@@ -11,7 +11,9 @@ import { Link } from "react-router-dom";
 
 import { db } from "../../services/firebaseConnection";
 import { collection, getDocs, orderBy, limit, startAfter, query } from 'firebase/firestore'
-import { format } from 'date-fns'
+import { format } from 'date-fns';
+
+import Modal from '../../components/Modal'
 
 import './dashboard.css'
 
@@ -177,6 +179,8 @@ export default function Dashboard(){
                     
                 </>
             </div>
+
+            <Modal/>
 
         </div>
     )
