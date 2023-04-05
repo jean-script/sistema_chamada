@@ -3,11 +3,11 @@ import { useState, useEffect, useContext } from 'react'
 import Header from '../../components/Header'
 import Title from '../../components/Title'
 import { FiPlusCircle} from 'react-icons/fi';
-import { useParams } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 
 import { AuthContext } from '../../contexts/auth'
 import { db } from '../../services/firebaseConnection'
-import { collection,getDocs, getDoc, doc, addDoc } from 'firebase/firestore'
+import { collection,getDocs, getDoc, doc, addDoc, updateDoc } from 'firebase/firestore'
 
 import './new.css';
 import { toast } from 'react-toastify'
@@ -18,6 +18,7 @@ export default function New(){
 
   const { user } = useContext(AuthContext);
   const { id } = useParams(); 
+  const navigate = useNavigate();
 
   const [customers, setCustomers] = useState([]);
   const [loadCustomer, setLoadCustomer] = useState(true);
@@ -114,7 +115,28 @@ export default function New(){
 
     if(idCustomer){
       
-      
+      //atualizando chamado
+
+      const docRef = doc(db, "chamados", id)
+      await updateDoc(docRef, {
+        cliente: customers[customerSelected].nomeFantasia,
+        clienteId:customers[customerSelected].id,
+        assunto: assunto,
+        complemento	: complemento,
+        status: status,
+        userId: user.uid,
+      })
+      .then(()=>{
+        toast.info("Atualizado com sucesso!");
+        setCustomerSelected(0);
+        setComplemento('');
+
+        navigate('/dashboard')
+      })
+      .catch((error)=>{
+        toast.error("Ops! Erro ao atualizar chamado!")
+        console.log(error);
+      })
 
       return;
     }
@@ -146,7 +168,7 @@ export default function New(){
       <Header/>
 
       <div className="content">
-        <Title name="Novo chamado">
+        <Title name={id ? "Editando chamado" : "Novo chamado"}>
           <FiPlusCircle size={25}/>
         </Title>
 
